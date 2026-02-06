@@ -24,7 +24,7 @@ pub fn main() !void {
 
     const expr = Expr.init(select, from, null);
 
-    std.debug.print("expr: {f}", .{expr});
+    std.debug.print("expr: {f}\n", .{expr});
 }
 
 const Expr = struct {
@@ -53,7 +53,6 @@ const Expr = struct {
         if (self.where) |w| {
             try writer.print(" WHERE {any}", .{w});
         }
-        try writer.print("\n", .{});
     }
 };
 
