@@ -1,35 +1,46 @@
 const std = @import("std");
+const Allocator = std.mem.Allocator;
 
 pub const Expr = struct {
-    columns: SelectClause,
-    table: FromClause,
-    where: ?FilterClause,
+    const Self = @This();
+    select: SelectClause,
+    from: FromClause,
+    where: ?WhereClause,
 
     pub fn init(
         columns: SelectClause,
         table: FromClause,
-        where: ?FilterClause,
+        where: ?WhereClause,
     ) Expr {
         return .{
-            .columns = columns,
-            .table = table,
+            .select = columns,
+            .from = table,
             .where = where,
         };
+    }
+
+    pub fn initEmpty() Expr {
+        return std.mem.zeroInit(Expr, .{});
+    }
+
+    pub fn deinit(self: *Self, allocator: Allocator) void {
+        defer self.select.deinit(allocator);
     }
 
     pub fn format(
         self: Expr,
         writer: *std.io.Writer,
     ) !void {
-        try writer.print("SELECT {f} FROM {f}", .{ self.columns, self.table });
+        try writer.print("SELECT {f} FROM {f}", .{ self.select, self.from });
 
         if (self.where) |w| {
-            try writer.print(" WHERE {any}", .{w});
+            try writer.print(" WHERE {f}", .{w});
         }
     }
 };
 
 pub const SelectClause = struct {
+    const Self = @This();
     pub const Columns = std.ArrayList([]const u8);
     columns: Columns,
 
@@ -37,6 +48,12 @@ pub const SelectClause = struct {
         return .{
             .columns = columns,
         };
+    }
+
+    pub fn deinit(self: *Self, allocator: Allocator) void {
+        for (self.columns.items) |col| {
+            allocator.free(col);
+        }
     }
 
     pub fn format(
@@ -63,6 +80,17 @@ pub const FromClause = struct {
     }
 };
 
-pub const FilterClause = union(enum) {
-    a: i32,
+pub const WhereClause = struct {
+    name: []const u8,
+
+    pub fn init(name: []const u8) WhereClause {
+        return .{ .name = name };
+    }
+
+    pub fn format(
+        self: WhereClause,
+        writer: *std.io.Writer,
+    ) !void {
+        try writer.print("{s}", .{self.name});
+    }
 };

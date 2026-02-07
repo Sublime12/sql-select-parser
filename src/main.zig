@@ -6,10 +6,11 @@ const Expr = expression_pkg.Expr;
 const FromClause = expression_pkg.FromClause;
 const SelectClause = expression_pkg.SelectClause;
 const Lexer = parser_pkg.Lexer;
+const Parser = parser_pkg.Parser;
 
 pub fn main() !void {
     const query =
-        \\ select c1, c2
+        \\ select ab, cd,
         \\ from  table
         \\ where condition
         \\ 
@@ -19,12 +20,17 @@ pub fn main() !void {
     const allocator = gpa.allocator();
     var lexer = Lexer.init(allocator, query, query.len, "select.sql");
 
-    while (try lexer.next()) {
-        // std.debug.print("{}\n", .{ lexer.token });
-        lexer.token_display();
+    //    while (try lexer.next()) {
+    //        // std.debug.print("{}\n", .{ lexer.token });
+    //        lexer.token_display();
+    //
+    //        if (lexer.token == .TokenEnd) break;
+    //    }
+    var parser = Parser.init(allocator, &lexer);
+    var expr = try parser.parse();
+    defer expr.deinit(allocator);
 
-        if (lexer.token == .TokenEnd) break;
-    }
+    std.debug.print("expr: {f}\n", .{expr});
 }
 
 test "create simple sql ast" {
