@@ -20,12 +20,6 @@ pub fn main() !void {
     const allocator = gpa.allocator();
     var lexer = Lexer.init(allocator, query, query.len, "select.sql");
 
-    //    while (try lexer.next()) {
-    //        // std.debug.print("{}\n", .{ lexer.token });
-    //        lexer.token_display();
-    //
-    //        if (lexer.token == .TokenEnd) break;
-    //    }
     var parser = Parser.init(allocator, &lexer);
     var expr = try parser.parse();
     defer expr.deinit(allocator);
