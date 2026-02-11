@@ -17,7 +17,7 @@ pub fn main() !void {
     // ;
 
     const query1 =
-        \\ select (select 15,),     ab, sddd,
+        \\ select (select 15, (select bonjour, from salut),),     ab, sddd,
         \\ xxcddjdf, 
         \\          from table111
         \\ where 10202020
@@ -41,7 +41,7 @@ pub fn main() !void {
     defer expr.deinit(allocator);
 
     // rows = db.execute(expr);
-    std.debug.print("expr: {any}\n", .{expr});
+    std.debug.print("expr: {f}\n", .{expr});
 }
 
 test "create simple sql ast" {
