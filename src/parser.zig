@@ -16,10 +16,12 @@ const Cursor = struct {
         .pos = 0,
         .bol = 0,
         .row = 0,
+        .col = 0,
     };
 
     pos: usize,
     bol: usize,
+    col: usize,
     row: usize,
 };
 
@@ -87,9 +89,11 @@ pub const Lexer = struct {
         if (l.cursor.pos >= l.count) return null;
         const x = l.content[l.cursor.pos];
         l.cursor.pos += 1;
+        l.cursor.col += 1;
         if (x == '\n') {
             l.cursor.row += 1;
             l.cursor.bol = l.cursor.pos;
+            l.cursor.col = 0;
         }
         return x;
     }
@@ -104,7 +108,8 @@ pub const Lexer = struct {
         return std.ascii.isAlphanumeric(c) or c == '_';
     }
 
-    pub fn next(l: *Self) !bool {
+    pub fn next(l: *Self) error{OutOfMemory}!bool {
+        std.debug.print("token: {}\n", .{l.token});
         l.trim_left();
 
         const x_opt = l.next_char();
@@ -165,8 +170,19 @@ pub const Lexer = struct {
     }
 
     pub fn expect(l: Self, token: TokenKind) void {
+        if (l.token != token) {
+            std.debug.print("{s}:{},{}\n", .{
+                l.filepath,
+                l.cursor.row,
+                l.cursor.col,
+            });
+        }
         std.debug.assert(l.token == token);
     }
+};
+
+const ParseErr = error{
+    UnexpectedToken,
 };
 
 pub const Parser = struct {
@@ -184,26 +200,23 @@ pub const Parser = struct {
 
     pub fn parse(self: *Self) !Expr {
         self.lexer.cursor = .empty;
+        _ = try self.lexer.next();
         return parseExpr(self.allocator, self.lexer);
     }
 
-    fn parseExpr(allocator: Allocator, l: *Lexer) !Expr {
+    fn parseExpr(allocator: Allocator, l: *Lexer) error{OutOfMemory}!Expr {
         var expr = Expr.initEmpty();
 
-        _ = try l.next();
+        // _ = try l.next();
         if (l.token == .TokenSelect) {
-            const select = try parseSelect(allocator, l);
-            // std.debug.print("{f}\n", .{ select });
-            expr.select = select;
+            expr.select = try parseSelect(allocator, l);
         }
-        l.expect(.TokenFrom);
+
         if (l.token == .TokenFrom) {
-            const from = try parseFrom(allocator, l);
-            expr.from = from;
+            expr.from = try parseFrom(allocator, l);
         }
         if (l.token == .TokenWhere) {
-            const where = try parseWhere(allocator, l);
-            expr.where = where;
+            expr.where = try parseWhere(allocator, l);
         }
         return expr;
     }
@@ -211,22 +224,35 @@ pub const Parser = struct {
     fn parseSelect(alloc: Allocator, l: *Lexer) !SelectClause {
         // going simple just identifiers
         // at least one identifier
+        l.expect(.TokenSelect);
         _ = try l.next();
         // l.expect(.TokenId);
 
         var columns = std.ArrayList(Column).empty;
-        while (l.token == .TokenId) {
-            std.debug.print("name: {s}\n", .{l.name.items});
-            try columns.append(alloc, Column{ .id = try alloc.dupe(u8, l.name.items) });
-            _ = try l.next();
-            // std.debug.print("token1 : {}\n", .{ l.token });
-            l.expect(.TokenComma);
-            _ = try l.next();
+        while (true) {
+            std.debug.print("xx{} {s}\n", .{ l.token, l.name.items });
+            if (l.token == .TokenId) {
+                try columns.append(alloc, .{ .id = try alloc.dupe(u8, l.name.items) });
+                _ = try l.next();
+                l.expect(.TokenComma);
+                _ = try l.next();
+            } else if (l.token == .TokenOParent) {
+                // pass oparen
+                l.expect(.TokenOParent);
+                _ = try l.next();
+                const expr = try parseExpr(alloc, l);
+                try columns.append(alloc, .{ .expr = expr });
+                l.expect(.TokenCParent);
+                _ = try l.next();
+                _ = try l.next();
+            } else {
+                break;
+            }
+
             // std.debug.print("token2 : {}\n", .{ l.token });
         }
 
-        const selectClause = SelectClause.init(columns);
-        return selectClause;
+        return SelectClause.init(columns);
     }
 
     fn parseFrom(alloc: Allocator, l: *Lexer) !FromClause {

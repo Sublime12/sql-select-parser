@@ -17,7 +17,7 @@ pub fn main() !void {
     // ;
 
     const query1 =
-        \\ select (select 15),     ab, sddd,
+        \\ select (select 15,),     ab, sddd,
         \\ xxcddjdf, 
         \\          from table111
         \\ where 10202020
@@ -27,21 +27,21 @@ pub fn main() !void {
     const allocator = gpa.allocator();
     var lexer = Lexer.init(allocator, query1, query1.len, "select.sql");
 
-    _ = try lexer.next();
-    while (true) {
-        const token = lexer.token;
-        std.debug.print("{} -> v: {s}\n", .{ token, lexer.name.items });
-        if (!try lexer.next() or lexer.token == .TokenEnd) {
-            break;
-        }
-    }
+    // _ = try lexer.next();
+    // while (true) {
+    //     const token = lexer.token;
+    //     std.debug.print("{} -> v: {s}\n", .{ token, lexer.name.items });
+    //     if (!try lexer.next() or lexer.token == .TokenEnd) {
+    //         break;
+    //     }
+    // }
 
-    // var parser = Parser.init(allocator, &lexer);
-    // var expr = try parser.parse();
-    // defer expr.deinit(allocator);
+    var parser = Parser.init(allocator, &lexer);
+    var expr = try parser.parse();
+    defer expr.deinit(allocator);
 
     // rows = db.execute(expr);
-    // std.debug.print("expr: {f}\n", .{expr});
+    std.debug.print("expr: {any}\n", .{expr});
 }
 
 test "create simple sql ast" {

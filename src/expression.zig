@@ -31,7 +31,11 @@ pub const Expr = struct {
         self: Expr,
         writer: *std.io.Writer,
     ) !void {
-        try writer.print("SELECT {any} FROM {any}", .{ self.select, self.from });
+        try writer.print("SELECT {f}", .{self.select});
+
+        if (self.from) |f| {
+            try writer.print(" FROM {f}", .{f});
+        }
 
         if (self.where) |w| {
             try writer.print(" WHERE {f}", .{w});
@@ -77,7 +81,10 @@ pub const SelectClause = struct {
         writer: *std.io.Writer,
     ) !void {
         for (self.columns.items) |col| {
-            try writer.print("{s}, ", .{col});
+            switch (col) {
+                .id => try writer.print("{s}", .{col.id}),
+                .expr => try writer.print("{f}", .{col.expr}),
+            }
         }
     }
 };
