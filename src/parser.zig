@@ -2,6 +2,7 @@ const std = @import("std");
 const expression_pkg = @import("expression.zig");
 
 const Expr = expression_pkg.Expr;
+const Column = expression_pkg.Column;
 const SelectClause = expression_pkg.SelectClause;
 const FromClause = expression_pkg.FromClause;
 const WhereClause = expression_pkg.WhereClause;
@@ -29,6 +30,8 @@ const TokenKind = enum {
     TokenWhere,
     TokenComma,
     TokenEnd,
+    TokenOParent,
+    TokenCParent,
     TokenNone,
 };
 
@@ -113,10 +116,24 @@ pub const Lexer = struct {
 
         switch (x) {
             ',' => {
+                l.name.clearRetainingCapacity();
+                try l.name.append(l.alloc, x);
                 l.token = .TokenComma;
                 return true;
             },
             else => {},
+            '(' => {
+                l.name.clearRetainingCapacity();
+                try l.name.append(l.alloc, x);
+                l.token = .TokenOParent;
+                return true;
+            },
+            ')' => {
+                l.name.clearRetainingCapacity();
+                try l.name.append(l.alloc, x);
+                l.token = .TokenCParent;
+                return true;
+            },
         }
 
         if (isSymbol(x)) {
@@ -195,12 +212,12 @@ pub const Parser = struct {
         // going simple just identifiers
         // at least one identifier
         _ = try l.next();
-        l.expect(.TokenId);
+        // l.expect(.TokenId);
 
-        var columns = std.ArrayList([]const u8).empty;
+        var columns = std.ArrayList(Column).empty;
         while (l.token == .TokenId) {
             std.debug.print("name: {s}\n", .{l.name.items});
-            try columns.append(alloc, try alloc.dupe(u8, l.name.items));
+            try columns.append(alloc, Column{ .id = try alloc.dupe(u8, l.name.items) });
             _ = try l.next();
             // std.debug.print("token1 : {}\n", .{ l.token });
             l.expect(.TokenComma);

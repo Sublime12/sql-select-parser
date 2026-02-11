@@ -4,7 +4,7 @@ const Allocator = std.mem.Allocator;
 pub const Expr = struct {
     const Self = @This();
     select: SelectClause,
-    from: FromClause,
+    from: ?FromClause,
     where: ?WhereClause,
 
     pub fn init(
@@ -31,7 +31,7 @@ pub const Expr = struct {
         self: Expr,
         writer: *std.io.Writer,
     ) !void {
-        try writer.print("SELECT {f} FROM {f}", .{ self.select, self.from });
+        try writer.print("SELECT {any} FROM {any}", .{ self.select, self.from });
 
         if (self.where) |w| {
             try writer.print(" WHERE {f}", .{w});
@@ -39,9 +39,19 @@ pub const Expr = struct {
     }
 };
 
+const ColumnTag = enum {
+    id,
+    expr,
+};
+
+pub const Column = union(ColumnTag) {
+    id: []const u8,
+    expr: Expr,
+};
+
 pub const SelectClause = struct {
     const Self = @This();
-    pub const Columns = std.ArrayList([]const u8);
+    pub const Columns = std.ArrayList(Column);
     columns: Columns,
 
     pub fn init(columns: Columns) SelectClause {
@@ -52,7 +62,13 @@ pub const SelectClause = struct {
 
     pub fn deinit(self: *Self, allocator: Allocator) void {
         for (self.columns.items) |col| {
-            allocator.free(col);
+            switch (col) {
+                .id => |c| {
+                    allocator.free(c);
+                },
+                else => {},
+            }
+            // allocator.free(col);
         }
     }
 
