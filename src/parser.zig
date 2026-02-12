@@ -109,7 +109,7 @@ pub const Lexer = struct {
     }
 
     pub fn next(l: *Self) error{OutOfMemory}!bool {
-        std.debug.print("token: {}\n", .{l.token});
+        // std.debug.print("token: {}\n", .{l.token});
         l.trim_left();
 
         const x_opt = l.next_char();
@@ -230,7 +230,7 @@ pub const Parser = struct {
 
         var columns = std.ArrayList(Column).empty;
         while (true) {
-            std.debug.print("xx{} {s}\n", .{ l.token, l.name.items });
+            // std.debug.print("xx{} {s}\n", .{ l.token, l.name.items });
             if (l.token == .TokenId) {
                 try columns.append(alloc, .{ .id = try alloc.dupe(u8, l.name.items) });
                 _ = try l.next();
@@ -244,6 +244,8 @@ pub const Parser = struct {
                 try columns.append(alloc, .{ .expr = expr });
                 l.expect(.TokenCParent);
                 _ = try l.next();
+                // consume the comma after
+                l.expect(.TokenComma);
                 _ = try l.next();
             } else {
                 break;
@@ -256,6 +258,7 @@ pub const Parser = struct {
     }
 
     fn parseFrom(alloc: Allocator, l: *Lexer) !FromClause {
+        l.expect(.TokenFrom);
         _ = try l.next();
         l.expect(.TokenId);
 
@@ -264,6 +267,7 @@ pub const Parser = struct {
         return from;
     }
 
+    // unfinished
     fn parseWhere(alloc: Allocator, l: *Lexer) !WhereClause {
         _ = try l.next();
         l.expect(.TokenId);
