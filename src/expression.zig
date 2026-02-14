@@ -112,17 +112,17 @@ const Bool = enum {
 const CondTag = enum {
     bool_,
     equal,
-    and_,
-    or_,
-    not,
+    // and_,
+    // or_,
+    // not,
 };
 
 pub const CondExpr = union(CondTag) {
     bool_: Bool,
     equal: EqualClause,
-    and_: *AndClause,
-    or_: *OrClause,
-    not: *NotClause,
+    // and_: *AndClause,
+    // or_: *OrClause,
+    // not: *NotClause,
 };
 
 const EqualClause = struct {

@@ -306,16 +306,15 @@ pub const Parser = struct {
     fn parseCond(alloc: Allocator, l: *Lexer) !CondExpr {
         // const query1 = "select col2, col1, from table1 where col3 = 2";
         if (l.token == .TokenId) {
-            const name = try alloc.dupe(u8, l.name.items);                    
+            const name = try alloc.dupe(u8, l.name.items);
             _ = try l.next();
             if (l.token == .TokenEq) {
                 _ = try l.next();
                 l.expect(.TokenId);
                 const value = std.fmt.parseInt(i32, l.name.items, 10) catch unreachable;
-                const eqlExpr: CondExpr = .{ .equal = .{.id = name, .val = value }};
+                const eqlExpr: CondExpr = .{ .equal = .{ .id = name, .val = value } };
                 return eqlExpr;
             }
-
         }
         unreachable;
     }
