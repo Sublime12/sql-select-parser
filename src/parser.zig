@@ -34,6 +34,12 @@ const TokenKind = enum {
     TokenEnd,
     TokenOParent,
     TokenCParent,
+    TokenEq,
+    TokenLt,
+    TokenLe,
+    TokenGt,
+    TokenGe,
+    TokenValue,
     TokenNone,
 };
 
@@ -126,7 +132,6 @@ pub const Lexer = struct {
                 l.token = .TokenComma;
                 return true;
             },
-            else => {},
             '(' => {
                 l.name.clearRetainingCapacity();
                 try l.name.append(l.alloc, x);
@@ -139,6 +144,25 @@ pub const Lexer = struct {
                 l.token = .TokenCParent;
                 return true;
             },
+            '=' => {
+                l.name.clearRetainingCapacity();
+                try l.name.append(l.alloc, x);
+                l.token = .TokenEq;
+                return true;
+            },
+            '>' => {
+                l.name.clearRetainingCapacity();
+                try l.name.append(l.alloc, x);
+                l.token = .TokenGt;
+                return true;
+            },
+            '<' => {
+                l.name.clearRetainingCapacity();
+                try l.name.append(l.alloc, x);
+                l.token = .TokenLt;
+                return true;
+            },
+            else => {},
         }
 
         if (isSymbol(x)) {

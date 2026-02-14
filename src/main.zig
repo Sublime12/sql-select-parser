@@ -28,21 +28,22 @@ pub fn main() !void {
     //     \\          from table1
     //     \\ where 10202020
     // ;
-    const query1 = "select col2, col1, from table1";
+    const query1 = "select col2, col1, from table1 where col3 = 2";
 
     var gpa = std.heap.DebugAllocator(.{}).init;
     const allocator = gpa.allocator();
     var lexer = Lexer.init(allocator, query1, query1.len, "select.sql");
 
-    // _ = try lexer.next();
-    // while (true) {
-    //     const token = lexer.token;
-    //     std.debug.print("{} -> v: {s}\n", .{ token, lexer.name.items });
-    //     if (!try lexer.next() or lexer.token == .TokenEnd) {
-    //         break;
-    //     }
-    // }
+    _ = try lexer.next();
+    while (true) {
+        const token = lexer.token;
+        std.debug.print("{} -> v: {s}\n", .{ token, lexer.name.items });
+        if (!try lexer.next() or lexer.token == .TokenEnd) {
+            break;
+        }
+    }
 
+    if (true) return;
     var parser = Parser.init(allocator, &lexer);
     var expr = try parser.parse();
     defer expr.deinit(allocator);
