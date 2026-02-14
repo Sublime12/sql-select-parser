@@ -44,9 +44,10 @@ pub fn execute(
         // table does not exist
         std.debug.assert(std.mem.eql(u8, from.name, table.name));
         for (table.rows.items) |*row| {
-            switch(expr.where.?.cond) {
+            switch (expr.where.?.cond) {
                 .equal => |eqlCond| {
                     if (findIdx(eqlCond.id, table.columns)) |i| {
+                        // the filter clause with eql
                         if (row.items[i] == eqlCond.val) {
                             try getRow(alloc, result, &expr.select, row, table);
                         }
@@ -67,7 +68,7 @@ pub fn execute(
 fn findIdx(needle: []const u8, list: std.ArrayList([]const u8)) ?usize {
     for (list.items, 0..) |el, i| {
         if (std.mem.eql(u8, needle, el)) {
-           return i; 
+            return i;
         }
     }
     return null;
