@@ -6,6 +6,7 @@ const Column = expression_pkg.Column;
 const SelectClause = expression_pkg.SelectClause;
 const FromClause = expression_pkg.FromClause;
 const WhereClause = expression_pkg.WhereClause;
+const CondExpr = expression_pkg.CondExpr;
 
 const Allocator = std.mem.Allocator;
 
@@ -36,10 +37,10 @@ const TokenKind = enum {
     TokenCParent,
     TokenEq,
     TokenLt,
-    TokenLe,
     TokenGt,
-    TokenGe,
-    TokenValue,
+    // TokenLe,
+    // TokenGe,
+    // TokenValue,
     TokenNone,
 };
 
@@ -293,9 +294,18 @@ pub const Parser = struct {
 
     // unfinished
     fn parseWhere(alloc: Allocator, l: *Lexer) !WhereClause {
+        l.expect(.TokenWhere);
         _ = try l.next();
-        l.expect(.TokenId);
-        const where = WhereClause.init(try alloc.dupe(u8, l.name.items));
+        // l.expect(.TokenId);
+        // const where = WhereClause.init(try alloc.dupe(u8, l.name.items));
+        const cond = try parseCond(alloc, l);
+        const where = WhereClause.init(cond);
         return where;
+    }
+
+    fn parseCond(alloc: Allocator, l: *Lexer) !CondExpr {
+        _ = alloc;
+        _ = l;
+        unreachable;
     }
 };

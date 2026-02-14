@@ -34,16 +34,16 @@ pub fn main() !void {
     const allocator = gpa.allocator();
     var lexer = Lexer.init(allocator, query1, query1.len, "select.sql");
 
-    _ = try lexer.next();
-    while (true) {
-        const token = lexer.token;
-        std.debug.print("{} -> v: {s}\n", .{ token, lexer.name.items });
-        if (!try lexer.next() or lexer.token == .TokenEnd) {
-            break;
-        }
-    }
+    // _ = try lexer.next();
+    // while (true) {
+    //     const token = lexer.token;
+    //     std.debug.print("{} -> v: {s}\n", .{ token, lexer.name.items });
+    //     if (!try lexer.next() or lexer.token == .TokenEnd) {
+    //         break;
+    //     }
+    // }
 
-    if (true) return;
+    // if (true) return;
     var parser = Parser.init(allocator, &lexer);
     var expr = try parser.parse();
     defer expr.deinit(allocator);

@@ -104,17 +104,57 @@ pub const FromClause = struct {
     }
 };
 
-pub const WhereClause = struct {
-    name: []const u8,
+const Bool = enum {
+    true,
+    false,
+};
 
-    pub fn init(name: []const u8) WhereClause {
-        return .{ .name = name };
+const CondTag = enum {
+    bool_,
+    equal,
+    and_,
+    or_,
+    not,
+};
+
+pub const CondExpr = union(CondTag) {
+    bool_: Bool,
+    equal: EqualClause,
+    and_: *AndClause,
+    or_: *OrClause,
+    not: *NotClause,
+};
+
+const EqualClause = struct {
+    id: []const u8,
+    val: i32,
+};
+
+const AndClause = struct {
+    cond1: CondExpr,
+    cond2: CondExpr,
+};
+
+const OrClause = struct {
+    cond1: CondExpr,
+    cond2: CondExpr,
+};
+
+const NotClause = struct {
+    cond: CondExpr,
+};
+
+pub const WhereClause = struct {
+    cond: CondExpr,
+
+    pub fn init(cond: CondExpr) WhereClause {
+        return .{ .cond = cond };
     }
 
     pub fn format(
         self: WhereClause,
         writer: *std.io.Writer,
     ) !void {
-        try writer.print("{s}", .{self.name});
+        try writer.print("{any}", .{self.cond});
     }
 };
