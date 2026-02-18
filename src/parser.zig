@@ -6,6 +6,7 @@ const Column = expression_pkg.Column;
 const SelectClause = expression_pkg.SelectClause;
 const FromClause = expression_pkg.FromClause;
 const WhereClause = expression_pkg.WhereClause;
+const BinaryLogicClause = expression_pkg.BinaryLogicClause;
 const CondExpr = expression_pkg.CondExpr;
 
 const Allocator = std.mem.Allocator;
@@ -38,6 +39,8 @@ const TokenKind = enum {
     TokenEq,
     TokenLt,
     TokenGt,
+    TokenOr,
+    TokenAnd,
     // TokenLe,
     // TokenGe,
     // TokenValue,
@@ -93,8 +96,12 @@ pub const Lexer = struct {
     }
 
     pub fn next_char(l: *Self) ?u8 {
-        if (l.cursor.pos >= l.count) return null;
-        const x = l.content[l.cursor.pos];
+        if (l.cursor.pos > l.count) return null;
+        const x = if (l.cursor.pos == l.count)
+            '#'
+        else
+            l.content[l.cursor.pos];
+
         l.cursor.pos += 1;
         l.cursor.col += 1;
         if (x == '\n') {
@@ -120,7 +127,7 @@ pub const Lexer = struct {
         l.trim_left();
 
         const x_opt = l.next_char();
-        if (x_opt == 0 or x_opt == null) {
+        if (x_opt == null) {
             l.token = .TokenEnd;
             return true;
         }
@@ -186,6 +193,12 @@ pub const Lexer = struct {
             } else if (eql("where", l.name.items)) {
                 l.token = .TokenWhere;
                 return true;
+            } else if (eql("and", l.name.items)) {
+                l.token = .TokenAnd;
+                return true;
+            } else if (eql("or", l.name.items)) {
+                l.token = .TokenOr;
+                return true;
             } else {
                 l.token = .TokenId;
                 return true;
@@ -200,6 +213,11 @@ pub const Lexer = struct {
                 l.filepath,
                 l.cursor.row,
                 l.cursor.col,
+            });
+            std.debug.print("expected {}, found this: {} - {s}\n", .{
+                token,
+                l.token,
+                l.name.items,
             });
         }
         std.debug.assert(l.token == token);
@@ -305,22 +323,50 @@ pub const Parser = struct {
 
     fn parseCond(alloc: Allocator, l: *Lexer) !CondExpr {
         // const query1 = "select col2, col1, from table1 where col3 = 2";
+        // (expr1) and (expr2)
+        // (expr1) or (expr2)
+        // ((expr1) or (expr2)) and (expr3)
+        if (l.token == .TokenOParent) {
+            _ = try l.next();
+            const expr = try parseCond(alloc, l);
+            l.expect(.TokenCParent);
+            _ = try l.next();
+            // checks if there is an or/and expr before returning
+            if (l.token == .TokenOr) {
+                _ = try l.next();
+                l.expect(.TokenOParent);
+                _ = try l.next();
+                const orExpr = try parseCond(alloc, l);
+                l.expect(.TokenCParent);
+                _ = try l.next();
+                const orClause = try alloc.create(BinaryLogicClause);
+                orClause.* = .{ .cond1 = expr, .cond2 = orExpr };
+                return .{ .or_ = orClause };
+            } else if (l.token == .TokenAnd) {
+                _ = try l.next();
+                l.expect(.TokenOParent);
+                _ = try l.next();
+                const andExpr = try parseCond(alloc, l);
+                l.expect(.TokenCParent);
+                _ = try l.next();
+                const andClause = try alloc.create(BinaryLogicClause);
+                andClause.* = .{ .cond1 = expr, .cond2 = andExpr };
+                return .{ .and_ = andClause };
+            }
+            return expr;
+        }
+
         if (l.token == .TokenId) {
             const name = try alloc.dupe(u8, l.name.items);
             _ = try l.next();
-            if (l.token == .TokenEq) {
-                _ = try l.next();
-                l.expect(.TokenId);
-                const value = std.fmt.parseInt(i32, l.name.items, 10) catch unreachable;
-                const eqlExpr: CondExpr = .{ .equal = .{ .id = name, .val = value } };
-                return eqlExpr;
-            }
+
             switch (l.token) {
                 .TokenEq => {
                     _ = try l.next();
                     l.expect(.TokenId);
                     const value = std.fmt.parseInt(i32, l.name.items, 10) catch unreachable;
                     const eqlExpr: CondExpr = .{ .equal = .{ .id = name, .val = value } };
+                    _ = try l.next();
                     return eqlExpr;
                 },
                 .TokenGt => {
@@ -328,6 +374,7 @@ pub const Parser = struct {
                     l.expect(.TokenId);
                     const value = std.fmt.parseInt(i32, l.name.items, 10) catch unreachable;
                     const gtExpr: CondExpr = .{ .gt = .{ .id = name, .val = value } };
+                    _ = try l.next();
                     return gtExpr;
                 },
                 .TokenLt => {
@@ -335,9 +382,10 @@ pub const Parser = struct {
                     l.expect(.TokenId);
                     const value = std.fmt.parseInt(i32, l.name.items, 10) catch unreachable;
                     const ltExpr: CondExpr = .{ .lt = .{ .id = name, .val = value } };
+                    _ = try l.next();
                     return ltExpr;
                 },
-                else => {},
+                else => unreachable,
             }
         }
         unreachable;

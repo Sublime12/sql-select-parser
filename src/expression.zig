@@ -114,8 +114,8 @@ const CondTag = enum {
     equal,
     gt,
     lt,
-    // and_,
-    // or_,
+    and_,
+    or_,
     // not,
 };
 
@@ -124,9 +124,9 @@ pub const CondExpr = union(CondTag) {
     equal: CompareClause,
     gt: CompareClause,
     lt: CompareClause,
-    // and_: *AndClause,
-    // or_: *OrClause,
-    // not: *NotClause,
+    and_: *BinaryLogicClause,
+    or_: *BinaryLogicClause,
+    // not: *UnaryLogicClause,
 };
 
 const CompareClause = struct {
@@ -134,12 +134,7 @@ const CompareClause = struct {
     val: i32,
 };
 
-const AndClause = struct {
-    cond1: CondExpr,
-    cond2: CondExpr,
-};
-
-const OrClause = struct {
+pub const BinaryLogicClause = struct {
     cond1: CondExpr,
     cond2: CondExpr,
 };
