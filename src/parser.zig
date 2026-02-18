@@ -330,6 +330,13 @@ pub const Parser = struct {
                     const gtExpr: CondExpr = .{ .gt = .{ .id = name, .val = value } };
                     return gtExpr;
                 },
+                .TokenLt => {
+                    _ = try l.next();
+                    l.expect(.TokenId);
+                    const value = std.fmt.parseInt(i32, l.name.items, 10) catch unreachable;
+                    const ltExpr: CondExpr = .{ .lt = .{ .id = name, .val = value } };
+                    return ltExpr;
+                },
                 else => {},
             }
         }

@@ -28,7 +28,7 @@ pub fn main() !void {
     //     \\          from table1
     //     \\ where 10202020
     // ;
-    const query1 = "select col2, col1, from table1 where col3 > 20";
+    const query1 = "select col2, col1, from table1 where col3 < 20";
 
     var gpa = std.heap.DebugAllocator(.{}).init;
     const allocator = gpa.allocator();

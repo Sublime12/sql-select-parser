@@ -64,6 +64,15 @@ pub fn execute(
                         @panic("column not found");
                     }
                 },
+                .lt => |gtCond| {
+                    if (findIdx(gtCond.id, table.columns)) |i| {
+                        if (row.items[i] < gtCond.val) {
+                            try getRow(alloc, result, &expr.select, row, table);
+                        }
+                    } else {
+                        @panic("column not found");
+                    }
+                },
                 else => @panic("expr cond not found"),
             }
         }
