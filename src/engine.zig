@@ -2,6 +2,8 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const expression_pkg = @import("expression.zig");
 
+const panic = std.debug.panic;
+
 const Expr = expression_pkg.Expr;
 const SelectClause = expression_pkg.SelectClause;
 
@@ -52,7 +54,7 @@ pub fn execute(
                             try getRow(alloc, result, &expr.select, row, table);
                         }
                     } else {
-                        @panic("column not found");
+                        panic("column {s} not found", .{eqlCond.id});
                     }
                 },
                 .gt => |gtCond| {
@@ -61,16 +63,16 @@ pub fn execute(
                             try getRow(alloc, result, &expr.select, row, table);
                         }
                     } else {
-                        @panic("column not found");
+                        panic("column {s} not found", .{gtCond.id});
                     }
                 },
-                .lt => |gtCond| {
-                    if (findIdx(gtCond.id, table.columns)) |i| {
-                        if (row.items[i] < gtCond.val) {
+                .lt => |ltCond| {
+                    if (findIdx(ltCond.id, table.columns)) |i| {
+                        if (row.items[i] < ltCond.val) {
                             try getRow(alloc, result, &expr.select, row, table);
                         }
                     } else {
-                        @panic("column not found");
+                        panic("column {s} not found", .{ltCond.id});
                     }
                 },
                 else => @panic("expr cond not found"),
