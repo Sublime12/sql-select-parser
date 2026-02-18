@@ -5,6 +5,7 @@ const expression_pkg = @import("expression.zig");
 const panic = std.debug.panic;
 
 const Expr = expression_pkg.Expr;
+const CondExpr = expression_pkg.CondExpr;
 const SelectClause = expression_pkg.SelectClause;
 
 pub const Row = std.ArrayList(i32);
@@ -43,39 +44,12 @@ pub fn execute(
     expr: *const Expr,
 ) !void {
     if (expr.from) |from| {
-        // table does not exist
+        // assert table does exist
         std.debug.assert(std.mem.eql(u8, from.name, table.name));
+
         for (table.rows.items) |*row| {
-            switch (expr.where.?.cond) {
-                .equal => |eqlCond| {
-                    if (findIdx(eqlCond.id, table.columns)) |i| {
-                        // the filter clause with eql
-                        if (row.items[i] == eqlCond.val) {
-                            try getRow(alloc, result, &expr.select, row, table);
-                        }
-                    } else {
-                        panic("column {s} not found", .{eqlCond.id});
-                    }
-                },
-                .gt => |gtCond| {
-                    if (findIdx(gtCond.id, table.columns)) |i| {
-                        if (row.items[i] > gtCond.val) {
-                            try getRow(alloc, result, &expr.select, row, table);
-                        }
-                    } else {
-                        panic("column {s} not found", .{gtCond.id});
-                    }
-                },
-                .lt => |ltCond| {
-                    if (findIdx(ltCond.id, table.columns)) |i| {
-                        if (row.items[i] < ltCond.val) {
-                            try getRow(alloc, result, &expr.select, row, table);
-                        }
-                    } else {
-                        panic("column {s} not found", .{ltCond.id});
-                    }
-                },
-                else => @panic("expr cond not found"),
+            if (evalCondExpr(&expr.where.?.cond, row, table)) {
+                try getRow(alloc, result, &expr.select, row, table);
             }
         }
     }
@@ -83,6 +57,55 @@ pub fn execute(
     // _ = table;
     // _ = expr;
     // unreachable;
+}
+
+fn evalCondExpr(
+    expr: *const CondExpr,
+    row: *const Row,
+    table: *const Table,
+) bool {
+    switch (expr.*) {
+        .equal => |eqlCond| {
+            if (findIdx(eqlCond.id, table.columns)) |i| {
+                // the filter clause with eql
+                if (row.items[i] == eqlCond.val) {
+                    return true;
+                }
+            } else {
+                panic("column {s} not found", .{eqlCond.id});
+            }
+        },
+        .gt => |gtCond| {
+            if (findIdx(gtCond.id, table.columns)) |i| {
+                if (row.items[i] > gtCond.val) {
+                    return true;
+                }
+            } else {
+                panic("column {s} not found", .{gtCond.id});
+            }
+        },
+        .lt => |ltCond| {
+            if (findIdx(ltCond.id, table.columns)) |i| {
+                if (row.items[i] < ltCond.val) {
+                    return true;
+                }
+            } else {
+                panic("column {s} not found", .{ltCond.id});
+            }
+        },
+        .and_ => |andCond| {
+            const eval1 = evalCondExpr(&andCond.cond1, row, table);
+            if (!eval1) return false;
+            return evalCondExpr(&andCond.cond2, row, table);
+        },
+        .or_ => |orCond| {
+            const eval1 = evalCondExpr(&orCond.cond1, row, table);
+            if (eval1) return true;
+            return evalCondExpr(&orCond.cond2, row, table);
+        },
+        else => @panic("expr cond not found"),
+    }
+    return false;
 }
 
 fn findIdx(needle: []const u8, list: std.ArrayList([]const u8)) ?usize {

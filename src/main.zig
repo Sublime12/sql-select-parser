@@ -30,7 +30,7 @@ pub fn main() !void {
     // ;
     const query1 =
         \\ select col2, col1, from table1 
-        \\ where ((col3 > 20) or (col1 = 2)) and (col2 > 7)
+        \\ where ((col1 < 20) and (col1 > 2)) 
     ;
 
     var gpa = std.heap.DebugAllocator(.{}).init;
