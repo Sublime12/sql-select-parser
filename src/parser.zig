@@ -315,6 +315,23 @@ pub const Parser = struct {
                 const eqlExpr: CondExpr = .{ .equal = .{ .id = name, .val = value } };
                 return eqlExpr;
             }
+            switch (l.token) {
+                .TokenEq => {
+                    _ = try l.next();
+                    l.expect(.TokenId);
+                    const value = std.fmt.parseInt(i32, l.name.items, 10) catch unreachable;
+                    const eqlExpr: CondExpr = .{ .equal = .{ .id = name, .val = value } };
+                    return eqlExpr;
+                },
+                .TokenGt => {
+                    _ = try l.next();
+                    l.expect(.TokenId);
+                    const value = std.fmt.parseInt(i32, l.name.items, 10) catch unreachable;
+                    const gtExpr: CondExpr = .{ .gt = .{ .id = name, .val = value } };
+                    return gtExpr;
+                },
+                else => {},
+            }
         }
         unreachable;
     }
