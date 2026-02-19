@@ -149,9 +149,11 @@ pub const CondExpr = union(CondTag) {
             .or_ => |or_| {
                 or_.deinit(allocator);
             },
+            .gt, .lt, .equal => |cmpClause| {
+                allocator.free(cmpClause.id);
+            },
             else => {},
         }
-        allocator.destroy(self);
     }
     // not: *UnaryLogicClause,
 };
