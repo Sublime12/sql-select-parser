@@ -14,52 +14,31 @@ const execute = engine_pkg.execute;
 const Table = engine_pkg.Table;
 const Row = engine_pkg.Row;
 
-pub fn main() !void {
-    // const query =
-    //     \\ select ab, cd,
-    //     \\ from  table
-    //     \\ where condition
-    //     \\
-    // ;
+pub fn main() !void {}
 
-    // const query1 =
-    //     \\ select (select 15, (select bonjour, from salut),),     ab, sddd,
-    //     \\ xxcddjdf,
-    //     \\          from table1
-    //     \\ where 10202020
-    // ;
-    const query1 =
-        \\ select col2, col1, from table1 
-        \\ where ((col1 < 20) and (col1 > 2)) 
-    ;
+test "create simple sql ast" {
+    const from = FromClause.init("table");
+    const allocator = std.testing.allocator;
 
-    var gpa = std.heap.DebugAllocator(.{}).init;
-    const allocator = gpa.allocator();
-    var lexer = Lexer.init(allocator, query1, query1.len, "select.sql");
+    var columns = SelectClause.Columns.empty;
+    defer columns.deinit(allocator);
 
-    // _ = try lexer.next();
-    // while (true) {
-    //     const token = lexer.token;
-    //     std.debug.print("{} -> v: {s}\n", .{ token, lexer.name.items });
-    //     if (!try lexer.next() or lexer.token == .TokenEnd) {
-    //         break;
-    //     }
-    // }
+    try columns.append(allocator, .{ .id = "c1" });
+    try columns.append(allocator, .{ .id = "c2" });
 
-    // if (true) return;
-    var parser = Parser.init(allocator, &lexer);
-    var expr = try parser.parse();
-    defer expr.deinit(allocator);
+    const select = SelectClause.init(columns);
 
-    // rows = db.execute(expr);
+    const expr = Expr.init(select, from, null);
+
     std.debug.print("expr: {f}\n", .{expr});
+}
 
+fn createTestTable(allocator: Allocator) !Table {
     var columns = std.ArrayList([]const u8).empty;
     inline for (0..5) |i| {
         try columns.append(allocator, std.fmt.comptimePrint("col{}", .{i}));
     }
     var table = Table.init(columns, "table1");
-    defer table.deinit(allocator);
 
     var n: i32 = 0;
 
@@ -72,49 +51,33 @@ pub fn main() !void {
         try table.rows.append(allocator, row);
     }
 
-    for (table.columns.items) |col| {
-        std.debug.print("{s}\t", .{col});
-    }
-    std.debug.print("\n", .{});
-    for (table.rows.items) |row| {
-        for (row.items) |el| {
-            std.debug.print("{}\t", .{el});
-        }
-        std.debug.print("\n", .{});
-    }
-
-    var result: Table = .empty;
-    try execute(allocator, &result, &table, &expr);
-
-    std.debug.print("Result: \n", .{});
-    for (result.columns.items) |col| {
-        std.debug.print("{s}\t", .{col});
-    }
-    std.debug.print("\n", .{});
-    for (result.rows.items) |row| {
-        for (row.items) |el| {
-            std.debug.print("{}\t", .{el});
-        }
-        std.debug.print("\n", .{});
-    }
+    return table;
 }
 
-test "create simple sql ast" {
-    const from = FromClause.init("table");
+test "run simple select from table" {
+    const query =
+        \\ select col2, col1, from table1 
+    ;
 
-    var gpa = std.heap.DebugAllocator(.{}).init;
-    const allocator = gpa.allocator();
-    defer _ = gpa.deinit();
+    var buffer: [1024]u8 = undefined;
+    var errwriter = std.fs.File.stderr().writer(&buffer);
+    const stderr = &errwriter.interface;
 
-    var columns = SelectClause.Columns.empty;
-    defer columns.deinit(allocator);
+    const allocator = std.testing.allocator;
+    var lexer = Lexer.init(allocator, query, query.len, "select.sql");
+    defer lexer.deinit();
 
-    try columns.append(allocator, "c1");
-    try columns.append(allocator, "c2");
+    var parser = Parser.init(allocator, &lexer);
+    var expr = try parser.parse();
+    defer expr.deinit(allocator);
 
-    const select = SelectClause.init(columns);
+    var table = try createTestTable(allocator);
+    defer table.deinit(allocator);
+    // try table.print(stderr);
+    try stderr.flush();
 
-    const expr = Expr.init(select, from, null);
-
-    std.debug.print("expr: {f}\n", .{expr});
+    var result: Table = .empty;
+    defer result.deinit(allocator);
+    try execute(allocator, &result, &table, &expr);
+    try std.testing.expect(result.rows.items.len == 20);
 }

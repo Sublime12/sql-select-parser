@@ -30,12 +30,16 @@ pub fn build(b: *std.Build) void {
         run_cmd.addArgs(args);
     }
     const mod_tests = b.addTest(.{
+        .name = "mod_test",
         .root_module = mod,
     });
+    b.installArtifact(mod_tests);
     const run_mod_tests = b.addRunArtifact(mod_tests);
     const exe_tests = b.addTest(.{
+        .name = "main_test",
         .root_module = exe.root_module,
     });
+    b.installArtifact(exe_tests);
     const run_exe_tests = b.addRunArtifact(exe_tests);
     const test_step = b.step("test", "Run tests");
     test_step.dependOn(&run_mod_tests.step);

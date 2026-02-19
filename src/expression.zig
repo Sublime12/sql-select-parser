@@ -25,6 +25,12 @@ pub const Expr = struct {
 
     pub fn deinit(self: *Self, allocator: Allocator) void {
         defer self.select.deinit(allocator);
+        if (self.where) |*where| {
+            where.deinit(allocator);
+        }
+        if (self.from) |*from| {
+            from.deinit(allocator);
+        }
     }
 
     pub fn format(
@@ -75,6 +81,7 @@ pub const SelectClause = struct {
             }
             // allocator.free(col);
         }
+        defer self.columns.deinit(allocator);
     }
 
     pub fn format(
@@ -91,9 +98,15 @@ pub const SelectClause = struct {
 };
 
 pub const FromClause = struct {
+    const Self = @This();
+
     name: []const u8,
     pub fn init(name: []const u8) FromClause {
         return .{ .name = name };
+    }
+
+    pub fn deinit(self: *Self, allocator: Allocator) void {
+        allocator.free(self.name);
     }
 
     pub fn format(
@@ -120,12 +133,26 @@ const CondTag = enum {
 };
 
 pub const CondExpr = union(CondTag) {
+    const Self = @This();
     bool_: Bool,
     equal: CompareClause,
     gt: CompareClause,
     lt: CompareClause,
     and_: *BinaryLogicClause,
     or_: *BinaryLogicClause,
+
+    pub fn deinit(self: *Self, allocator: Allocator) void {
+        switch (self.*) {
+            .and_ => |and_| {
+                and_.deinit(allocator);
+            },
+            .or_ => |or_| {
+                or_.deinit(allocator);
+            },
+            else => {},
+        }
+        allocator.destroy(self);
+    }
     // not: *UnaryLogicClause,
 };
 
@@ -137,6 +164,11 @@ const CompareClause = struct {
 pub const BinaryLogicClause = struct {
     cond1: CondExpr,
     cond2: CondExpr,
+
+    pub fn deinit(self: *BinaryLogicClause, allocator: Allocator) void {
+        self.cond1.deinit(allocator);
+        self.cond2.deinit(allocator);
+    }
 };
 
 const NotClause = struct {
@@ -148,6 +180,11 @@ pub const WhereClause = struct {
 
     pub fn init(cond: CondExpr) WhereClause {
         return .{ .cond = cond };
+    }
+
+    pub fn deinit(self: *WhereClause, allocator: Allocator) void {
+        var cond = &self.cond;
+        cond.deinit(allocator);
     }
 
     pub fn format(

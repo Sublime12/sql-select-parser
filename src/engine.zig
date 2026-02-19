@@ -32,8 +32,28 @@ pub const Table = struct {
     }
 
     pub fn deinit(self: *Table, allocator: Allocator) void {
+        // for (self.columns.items) |col| {
+        //     allocator.free(col);
+        // }
         self.columns.deinit(allocator);
+        for (self.rows.items) |*row| {
+            row.deinit(allocator);
+        }
         self.rows.deinit(allocator);
+    }
+
+    pub fn print(self: *const Table, writer: *std.io.Writer) !void {
+        try writer.print("Result: \n", .{});
+        for (self.columns.items) |col| {
+            try writer.print("{s}\t", .{col});
+        }
+        try writer.print("\n", .{});
+        for (self.rows.items) |row| {
+            for (row.items) |el| {
+                try writer.print("{}\t", .{el});
+            }
+            try writer.print("\n", .{});
+        }
     }
 };
 
@@ -48,7 +68,11 @@ pub fn execute(
         std.debug.assert(std.mem.eql(u8, from.name, table.name));
 
         for (table.rows.items) |*row| {
-            if (evalCondExpr(&expr.where.?.cond, row, table)) {
+            if (expr.where) |where| {
+                if (evalCondExpr(&where.cond, row, table)) {
+                    try getRow(alloc, result, &expr.select, row, table);
+                }
+            } else {
                 try getRow(alloc, result, &expr.select, row, table);
             }
         }

@@ -76,6 +76,10 @@ pub const Lexer = struct {
         };
     }
 
+    pub fn deinit(self: *Self) void {
+        self.name.deinit(self.alloc);
+    }
+
     pub fn token_display(l: Self) void {
         switch (l.token) {
             .TokenSelect => {
