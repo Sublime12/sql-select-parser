@@ -45,6 +45,8 @@ const TokenKind = enum {
     TokenGt,
     TokenOr,
     TokenAnd,
+    TokenOrder,
+    TokenBy,
     // TokenLe,
     // TokenGe,
     // TokenValue,
@@ -206,6 +208,12 @@ pub const Lexer = struct {
                 return true;
             } else if (eql("or", l.name.items)) {
                 l.token = .TokenOr;
+                return true;
+             } else if (eql("order", l.name.items)) {
+                l.token = .TokenOrder;
+                return true;
+            } else if (eql("by", l.name.items)) {
+                l.token = .TokenBy;
                 return true;
             } else {
                 l.token = .TokenId;
