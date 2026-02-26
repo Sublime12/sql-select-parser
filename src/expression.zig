@@ -26,6 +26,7 @@ pub const Expr = struct {
     pub fn deinit(self: *Self, allocator: Allocator) void {
         defer self.select.deinit(allocator);
         if (self.where) |*where| {
+            std.debug.print("where deinit: \n", .{});
             where.deinit(allocator);
         }
         if (self.from) |*from| {
@@ -143,12 +144,12 @@ pub const CondExpr = union(CondTag) {
 
     pub fn deinit(self: *Self, allocator: Allocator) void {
         switch (self.*) {
-            .and_ => |and_| {
-                and_.deinit(allocator);
+            .and_, .or_ => |binaryClause| {
+                binaryClause.deinit(allocator);
             },
-            .or_ => |or_| {
-                or_.deinit(allocator);
-            },
+            // .or_ => |or_| {
+            //     or_.deinit(allocator);
+            // },
             .gt, .lt, .equal => |cmpClause| {
                 allocator.free(cmpClause.id);
             },
@@ -170,6 +171,7 @@ pub const BinaryLogicClause = struct {
     pub fn deinit(self: *BinaryLogicClause, allocator: Allocator) void {
         self.cond1.deinit(allocator);
         self.cond2.deinit(allocator);
+        allocator.destroy(self);
     }
 };
 
