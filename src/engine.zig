@@ -90,7 +90,10 @@ pub fn sortTable(
     orderby: *const OrderByClause,
     table: *const Table,
 ) void {
-    const idx = findIdx(orderby.columns.items[0].id, table.columns) orelse panic("orderby col not found: \n", .{});
+    const idx = findIdx(orderby.columns.items[0].id, table.columns) orelse {
+        panic("orderby col not found: \n", .{});
+    };
+
     const ctx = .{idx};
     const rowCmp = struct {
         fn func(context: @TypeOf(ctx), r1: Row, r2: Row) bool {
