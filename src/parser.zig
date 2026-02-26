@@ -21,9 +21,13 @@ const Cursor = struct {
         .col = 0,
     };
 
+    /// absolute position of cursor
     pos: usize,
+    // beginning of line
     bol: usize,
+    // what column is the cursor at
     col: usize,
+    // what row is the cursor at
     row: usize,
 };
 
