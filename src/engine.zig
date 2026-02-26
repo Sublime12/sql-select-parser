@@ -7,6 +7,7 @@ const panic = std.debug.panic;
 const Expr = expression_pkg.Expr;
 const CondExpr = expression_pkg.CondExpr;
 const SelectClause = expression_pkg.SelectClause;
+const OrderByClause = expression_pkg.OrderByClause;
 
 pub const Row = std.ArrayList(i32);
 
@@ -77,10 +78,27 @@ pub fn execute(
             }
         }
     }
-    // _ = result;
-    // _ = table;
-    // _ = expr;
-    // unreachable;
+
+    if (expr.orderby) |*orderby| {
+        std.debug.assert(expr.from != null);
+        sortTable(result, orderby, table);
+    }
+}
+
+pub fn sortTable(
+    result: *Table,
+    orderby: *const OrderByClause,
+    table: *const Table,
+) void {
+    const idx = findIdx(orderby.columns.items[0].id, table.columns) orelse panic("orderby col not found: \n", .{});
+    const ctx = .{idx};
+    const rowCmp = struct {
+        fn func(context: @TypeOf(ctx), r1: Row, r2: Row) bool {
+            return r1.items[context[0]] < r2.items[context[0]];
+        }
+    }.func;
+
+    std.mem.sort(Row, result.rows.items, ctx, rowCmp);
 }
 
 fn evalCondExpr(
