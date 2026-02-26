@@ -1,21 +1,25 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
+const panic = std.debug.panic;
 
 pub const Expr = struct {
     const Self = @This();
     select: SelectClause,
     from: ?FromClause,
     where: ?WhereClause,
+    orderby: ?OrderByClause,
 
     pub fn init(
         columns: SelectClause,
         table: FromClause,
         where: ?WhereClause,
+        orderby: ?OrderByClause,
     ) Expr {
         return .{
             .select = columns,
             .from = table,
             .where = where,
+            .orderby = orderby,
         };
     }
 
@@ -25,12 +29,14 @@ pub const Expr = struct {
 
     pub fn deinit(self: *Self, allocator: Allocator) void {
         defer self.select.deinit(allocator);
-        if (self.where) |*where| {
-            std.debug.print("where deinit: \n", .{});
-            where.deinit(allocator);
-        }
         if (self.from) |*from| {
             from.deinit(allocator);
+        }
+        if (self.where) |*where| {
+            where.deinit(allocator);
+        }
+        if (self.orderby) |*orderby| {
+            orderby.deinit(allocator);
         }
     }
 
@@ -196,5 +202,31 @@ pub const WhereClause = struct {
         writer: *std.io.Writer,
     ) !void {
         try writer.print("{any}", .{self.cond});
+    }
+};
+
+pub const OrderByClause = struct {
+    const Self = @This();
+    pub const Columns = std.ArrayList(Column);
+    columns: Columns,
+
+    pub fn init(columns: Columns) Self {
+        return .{
+            .columns = columns,
+        };
+    }
+
+    pub fn deinit(self: *Self, allocator: Allocator) void {
+        for (self.columns.items) |column| {
+            switch (column) {
+                .id => |id| {
+                    allocator.free(id);
+                },
+                else => {
+                    panic("unreconized expr in order by clause\n", .{});
+                },
+            }
+        }
+        self.columns.deinit(allocator);
     }
 };

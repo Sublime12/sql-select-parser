@@ -28,7 +28,8 @@ test "create simple sql ast" {
 
     const select = SelectClause.init(columns);
 
-    const expr = Expr.init(select, from, null);
+    const expr = Expr.init(select, from, null, null);
+    // defer expr.deinit(allocator);
 
     std.debug.print("expr: {f}\n", .{expr});
 }
@@ -129,7 +130,7 @@ test "run simple select from table with order by" {
         \\ select col2, col1, from table1 where 
         \\      ((col1 > 6) and (col1 < 40)) or 
         \\      ((col2 > 1) and (col2 < 15))
-        \\ order by col1
+        \\ order by col1,
     ;
     // order by
     // aggregate

@@ -6,6 +6,7 @@ const Column = expression_pkg.Column;
 const SelectClause = expression_pkg.SelectClause;
 const FromClause = expression_pkg.FromClause;
 const WhereClause = expression_pkg.WhereClause;
+const OrderByClause = expression_pkg.OrderByClause;
 const BinaryLogicClause = expression_pkg.BinaryLogicClause;
 const CondExpr = expression_pkg.CondExpr;
 
@@ -209,7 +210,7 @@ pub const Lexer = struct {
             } else if (eql("or", l.name.items)) {
                 l.token = .TokenOr;
                 return true;
-             } else if (eql("order", l.name.items)) {
+            } else if (eql("order", l.name.items)) {
                 l.token = .TokenOrder;
                 return true;
             } else if (eql("by", l.name.items)) {
@@ -277,6 +278,9 @@ pub const Parser = struct {
         if (l.token == .TokenWhere) {
             expr.where = try parseWhere(allocator, l);
         }
+        if (l.token == .TokenOrder) {
+            expr.orderby = try parseOrderBy(allocator, l);
+        }
         return expr;
     }
 
@@ -314,6 +318,42 @@ pub const Parser = struct {
         }
 
         return SelectClause.init(columns);
+    }
+
+    fn parseOrderBy(alloc: Allocator, l: *Lexer) !OrderByClause {
+        // going simple just identifiers
+        // at least one identifier
+        l.expect(.TokenOrder);
+        _ = try l.next();
+
+        l.expect(.TokenBy);
+        _ = try l.next();
+
+        var columns = std.ArrayList(Column).empty;
+        while (true) {
+            // std.debug.print("xx{} {s}\n", .{ l.token, l.name.items });
+            if (l.token == .TokenId) {
+                try columns.append(alloc, .{ .id = try alloc.dupe(u8, l.name.items) });
+                _ = try l.next();
+                l.expect(.TokenComma);
+                _ = try l.next();
+            } else if (l.token == .TokenOParent) {
+                // pass oparen
+                l.expect(.TokenOParent);
+                _ = try l.next();
+                const expr = try parseExpr(alloc, l);
+                try columns.append(alloc, .{ .expr = expr });
+                l.expect(.TokenCParent);
+                _ = try l.next();
+                // consume the comma after
+                l.expect(.TokenComma);
+                _ = try l.next();
+            } else {
+                break;
+            }
+        }
+
+        return OrderByClause.init(columns);
     }
 
     fn parseFrom(alloc: Allocator, l: *Lexer) !FromClause {
