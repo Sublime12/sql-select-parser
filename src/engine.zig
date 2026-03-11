@@ -70,6 +70,10 @@ pub fn execute(
 
         for (table.rows.items) |*row| {
             if (expr.where) |where| {
+                // TODO: si form pk == thing
+                // fait la recherche binaire
+                // si  a < pk < b
+                // recherche pk = a recherche binaire < b
                 if (evalCondExpr(&where.cond, row, table)) {
                     try getRow(alloc, result, &expr.select, row, table);
                 }
@@ -90,6 +94,8 @@ pub fn sortTable(
     orderby: *const OrderByClause,
     table: *const Table,
 ) void {
+    // for now, we just sort by the first element
+    std.debug.assert(orderby.columns.items.len == 1);
     const idx = findIdx(orderby.columns.items[0].id, table.columns) orelse {
         panic("orderby col not found: \n", .{});
     };
