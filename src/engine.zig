@@ -8,6 +8,7 @@ const Expr = expression_pkg.Expr;
 const CondExpr = expression_pkg.CondExpr;
 const SelectClause = expression_pkg.SelectClause;
 const OrderByClause = expression_pkg.OrderByClause;
+const Order = expression_pkg.Order;
 
 pub const Row = std.ArrayList(i32);
 
@@ -85,29 +86,50 @@ pub fn execute(
 
     if (expr.orderby) |*orderby| {
         std.debug.assert(expr.from != null);
-        sortTable(result, orderby, table);
+        try sortTable(alloc, result, orderby, table);
     }
 }
 
 pub fn sortTable(
+    allocator: Allocator,
     result: *Table,
     orderby: *const OrderByClause,
     table: *const Table,
-) void {
+) !void {
     // for now, we just sort by the first element
     std.debug.assert(orderby.columns.items.len == 1);
-    const col = orderby.columns.items[0];
-    const idx = findIdx(col.id, table.columns) orelse {
-        panic("orderby col not found: {s} {}\n", .{ col.id, col.order });
-    };
+    // const col = orderby.columns.items[0];
+    // const idx = findIdx(col.id, table.columns) orelse {
+    //     panic("orderby col not found: {s} {}\n", .{ col.id, col.order });
+    // };
+    var ids: std.ArrayList(struct {usize, Order}) = .empty;
+    defer ids.deinit(allocator);
 
-    const ctx = .{ idx, col.order };
+    for (orderby.columns.items) |col| {
+        const id = findIdx(col.id, table.columns) orelse {
+            panic("orderby col not found: {s} {}\n", .{ col.id, col.order });
+        };
+        try ids.append(allocator, .{id, col.order});
+    }
+
+    const ctx = .{ ids };
     const rowCmp = struct {
         fn func(context: @TypeOf(ctx), r1: Row, r2: Row) bool {
-            if (context[1] == .Asc) {
-                return r1.items[context[0]] < r2.items[context[0]];
+            const ids_ctx = context[0];
+            for (ids_ctx.items) |col| {
+                if (col[1] == .Asc) {
+                    if (r1.items[col[0]] != r2.items[col[0]]) {
+                        return r1.items[col[0]] < r2.items[col[0]];
+                    }
+                } else if (col[1] == .Desc) {
+                    if (r1.items[col[0]] != r2.items[col[0]]) {
+                        return r1.items[col[0]] > r2.items[col[0]];
+                    }
+                } else unreachable;
             }
-            return r1.items[context[0]] > r2.items[context[0]];
+
+            // default return if all columns are equals
+            return true;
         }
     }.func;
 
