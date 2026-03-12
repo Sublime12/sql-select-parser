@@ -2,6 +2,21 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const panic = std.debug.panic;
 
+pub const Order = enum {
+    Desc,
+    Asc,
+};
+
+pub const OrderByCol = struct {
+    const Self = @This();
+    id: []const u8,
+    order: Order,
+
+    pub fn deinit(self: *Self, allocator: Allocator) void {
+        allocator.free(self.id);
+    } 
+};
+
 pub const Expr = struct {
     const Self = @This();
     select: SelectClause,
@@ -207,25 +222,19 @@ pub const WhereClause = struct {
 
 pub const OrderByClause = struct {
     const Self = @This();
-    pub const Columns = std.ArrayList(Column);
-    columns: Columns,
+    pub const OrderByColumns = std.ArrayList(OrderByCol);
 
-    pub fn init(columns: Columns) Self {
+    columns: OrderByColumns,
+
+    pub fn init(columns: OrderByColumns) Self {
         return .{
             .columns = columns,
         };
     }
 
     pub fn deinit(self: *Self, allocator: Allocator) void {
-        for (self.columns.items) |column| {
-            switch (column) {
-                .id => |id| {
-                    allocator.free(id);
-                },
-                else => {
-                    panic("unreconized expr in order by clause\n", .{});
-                },
-            }
+        for (self.columns.items) |*column| {
+            column.deinit(allocator);
         }
         self.columns.deinit(allocator);
     }

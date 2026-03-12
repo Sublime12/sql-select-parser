@@ -96,14 +96,18 @@ pub fn sortTable(
 ) void {
     // for now, we just sort by the first element
     std.debug.assert(orderby.columns.items.len == 1);
-    const idx = findIdx(orderby.columns.items[0].id, table.columns) orelse {
-        panic("orderby col not found: \n", .{});
+    const col = orderby.columns.items[0] ;
+    const idx = findIdx(col.id, table.columns) orelse {
+        panic("orderby col not found: {s} {}\n", .{col.id, col.order});
     };
 
-    const ctx = .{idx};
+    const ctx = .{idx, col.order};
     const rowCmp = struct {
         fn func(context: @TypeOf(ctx), r1: Row, r2: Row) bool {
-            return r1.items[context[0]] < r2.items[context[0]];
+            if (context[1] == .Asc) {
+                return r1.items[context[0]] < r2.items[context[0]];
+            }
+            return r1.items[context[0]] > r2.items[context[0]];
         }
     }.func;
 

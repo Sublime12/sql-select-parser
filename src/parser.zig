@@ -9,6 +9,8 @@ const WhereClause = expression_pkg.WhereClause;
 const OrderByClause = expression_pkg.OrderByClause;
 const BinaryLogicClause = expression_pkg.BinaryLogicClause;
 const CondExpr = expression_pkg.CondExpr;
+const Order = expression_pkg.Order;
+const OrderByCol = expression_pkg.OrderByCol;
 
 const Allocator = std.mem.Allocator;
 
@@ -48,6 +50,8 @@ const TokenKind = enum {
     TokenAnd,
     TokenOrder,
     TokenBy,
+    TokenDesc,
+    TokenAsc,
     // TokenLe,
     // TokenGe,
     // TokenValue,
@@ -216,6 +220,12 @@ pub const Lexer = struct {
             } else if (eql("by", l.name.items)) {
                 l.token = .TokenBy;
                 return true;
+             } else if (eql("desc", l.name.items)) {
+                l.token = .TokenDesc;
+                return true;
+            } else if (eql("asc", l.name.items)) {
+                l.token = .TokenAsc;
+                return true;
             } else {
                 l.token = .TokenId;
                 return true;
@@ -329,24 +339,25 @@ pub const Parser = struct {
         l.expect(.TokenBy);
         _ = try l.next();
 
-        var columns = std.ArrayList(Column).empty;
+        var columns = std.ArrayList(OrderByCol).empty;
         while (true) {
             // std.debug.print("xx{} {s}\n", .{ l.token, l.name.items });
             if (l.token == .TokenId) {
-                try columns.append(alloc, .{ .id = try alloc.dupe(u8, l.name.items) });
+                // try columns.append(alloc, .{ .id = try alloc.dupe(u8, l.name.items) });
+                const name = try alloc.dupe(u8, l.name.items);
                 _ = try l.next();
-                l.expect(.TokenComma);
-                _ = try l.next();
-            } else if (l.token == .TokenOParent) {
-                // pass oparen
-                l.expect(.TokenOParent);
-                _ = try l.next();
-                const expr = try parseExpr(alloc, l);
-                try columns.append(alloc, .{ .expr = expr });
-                l.expect(.TokenCParent);
-                _ = try l.next();
-                // consume the comma after
-                l.expect(.TokenComma);
+                // l.expect(.TokenComma);
+                var order: Order = .Asc;
+                if (l.token == .TokenDesc) {
+                    order = .Desc;
+                } else if (l.token == .TokenAsc) {
+                    order = .Asc;
+                } else {
+                    l.expect(.TokenComma);
+                }
+                const orderByCol: OrderByCol = .{ .id = name, .order = order };
+                try columns.append(alloc, orderByCol);
+
                 _ = try l.next();
             } else {
                 break;
