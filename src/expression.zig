@@ -14,7 +14,7 @@ pub const OrderByCol = struct {
 
     pub fn deinit(self: *Self, allocator: Allocator) void {
         allocator.free(self.id);
-    } 
+    }
 };
 
 pub const Expr = struct {

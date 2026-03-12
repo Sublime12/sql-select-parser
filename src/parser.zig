@@ -220,7 +220,7 @@ pub const Lexer = struct {
             } else if (eql("by", l.name.items)) {
                 l.token = .TokenBy;
                 return true;
-             } else if (eql("desc", l.name.items)) {
+            } else if (eql("desc", l.name.items)) {
                 l.token = .TokenDesc;
                 return true;
             } else if (eql("asc", l.name.items)) {
