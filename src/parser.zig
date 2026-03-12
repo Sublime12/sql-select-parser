@@ -231,6 +231,8 @@ pub const Lexer = struct {
                 return true;
             }
         }
+
+        l.token = .TokenNone;
         return false;
     }
 
@@ -340,25 +342,34 @@ pub const Parser = struct {
         _ = try l.next();
 
         var columns = std.ArrayList(OrderByCol).empty;
+        std.debug.print("orderby token display\n", .{});
         while (true) {
             // std.debug.print("xx{} {s}\n", .{ l.token, l.name.items });
+            l.token_display();
             if (l.token == .TokenId) {
                 // try columns.append(alloc, .{ .id = try alloc.dupe(u8, l.name.items) });
                 const name = try alloc.dupe(u8, l.name.items);
+                std.debug.print("before order token: ", .{});
+                l.token_display();
                 _ = try l.next();
                 // l.expect(.TokenComma);
                 var order: Order = .Asc;
+                std.debug.print("current order token: ", .{});
+                l.token_display();
                 if (l.token == .TokenDesc) {
                     order = .Desc;
+                    _ = try l.next();
                 } else if (l.token == .TokenAsc) {
                     order = .Asc;
-                } else {
-                    l.expect(.TokenComma);
+                    _ = try l.next();
                 }
+                l.expect(.TokenComma);
+                _ = try l.next();
+
                 const orderByCol: OrderByCol = .{ .id = name, .order = order };
                 try columns.append(alloc, orderByCol);
 
-                _ = try l.next();
+                // _ = try l.next();
             } else {
                 break;
             }

@@ -1,6 +1,8 @@
 const std = @import("std");
 
 const Allocator = std.mem.Allocator;
+const Random = std.Random;
+
 const expression_pkg = @import("expression.zig");
 const parser_pkg = @import("parser.zig");
 const engine_pkg = @import("engine.zig");
@@ -48,6 +50,27 @@ fn createTestTable(allocator: Allocator) !Table {
         for (0..5) |_| {
             try row.append(allocator, n);
             n += 1;
+        }
+        try table.rows.append(allocator, row);
+    }
+
+    return table;
+}
+
+fn createRandomTable(allocator: Allocator, rand: Random) !Table {
+    var columns = std.ArrayList([]const u8).empty;
+    inline for (0..5) |i| {
+        try columns.append(allocator, std.fmt.comptimePrint("col{}", .{i}));
+    }
+    var table = Table.init(columns, "table1");
+
+    // var n: i32 = 0;
+
+    for (0..20) |_| {
+        var row: Row = .empty;
+        for (0..5) |_| {
+            try row.append(allocator, rand.intRangeAtMost(i32, 0, 8));
+            // n += 1;
         }
         try table.rows.append(allocator, row);
     }
@@ -127,10 +150,10 @@ test "run simple select from table with where = id" {
 
 test "run simple select from table with order by" {
     const query =
-        \\ select col2, col1, from table1 where 
+        \\ select col1, col2, from table1 where 
         \\      ((col1 > 6) and (col1 < 40)) or 
         \\      ((col2 > 1) and (col2 < 15))
-        \\ order by col1 desc,
+        \\ order by col1 asc, col2 desc, 
     ;
     // order by
     // aggregate
@@ -151,13 +174,23 @@ test "run simple select from table with order by" {
     var expr = try parser.parse();
     defer expr.deinit(allocator);
 
-    var table = try createTestTable(allocator);
+
+    var prng: std.Random.DefaultPrng = .init(0);
+    const rand = prng.random();
+
+    var table = try createRandomTable(allocator, rand);
     defer table.deinit(allocator);
 
     var result: Table = .empty;
     defer result.deinit(allocator);
 
     try execute(allocator, &result, &table, &expr);
+
+    std.debug.print("expr: {f}", .{expr});
+
+    std.debug.print("Table: \n", .{});
+    try table.print(stderr);
+    std.debug.print("Result: \n", .{});
     try result.print(stderr);
     // try std.testing.expect(result.rows.items.len == 1);
     // const row = result.rows.items[0];

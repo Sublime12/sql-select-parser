@@ -68,6 +68,9 @@ pub const Expr = struct {
         if (self.where) |w| {
             try writer.print(" WHERE {f}", .{w});
         }
+        if (self.orderby) |orderby| {
+            try writer.print(" orderby {f}", .{orderby});
+        }
         try writer.print(")", .{});
     }
 };
@@ -238,4 +241,14 @@ pub const OrderByClause = struct {
         }
         self.columns.deinit(allocator);
     }
+
+    pub fn format(
+        self: Self,
+        writer: *std.io.Writer,
+    ) !void {
+        for (self.columns.items) |col| {
+            try writer.print("{s} {s}", .{col.id, if (col.order == .Asc) "asc" else "desc"});
+        }
+    }
+
 };

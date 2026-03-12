@@ -12,6 +12,7 @@ const Order = expression_pkg.Order;
 
 pub const Row = std.ArrayList(i32);
 
+// The struct owns the slices it contains
 pub const Table = struct {
     pub const empty: Table = .{
         .columns = .empty,
@@ -65,6 +66,9 @@ pub fn execute(
     table: *const Table,
     expr: *const Expr,
 ) !void {
+    var tmpResult: Table = .empty;
+    try tmpResult.columns.appendSlice(alloc, table.columns.items);
+    defer tmpResult.deinit(alloc);
     if (expr.from) |from| {
         // assert table does exist
         std.debug.assert(std.mem.eql(u8, from.name, table.name));
@@ -76,17 +80,21 @@ pub fn execute(
                 // si  a < pk < b
                 // recherche pk = a recherche binaire < b
                 if (evalCondExpr(&where.cond, row, table)) {
-                    try getRow(alloc, result, &expr.select, row, table);
+                    try tmpResult.rows.append(alloc, try row.clone(alloc));
                 }
             } else {
-                try getRow(alloc, result, &expr.select, row, table);
+                try tmpResult.rows.append(alloc, try row.clone(alloc));
             }
         }
     }
 
     if (expr.orderby) |*orderby| {
         std.debug.assert(expr.from != null);
-        try sortTable(alloc, result, orderby, table);
+        try sortTable(alloc, &tmpResult, orderby, table);
+    }
+
+    for (tmpResult.rows.items) |*row| {
+        try getRow(alloc, result, &expr.select, row, &tmpResult);
     }
 }
 
@@ -97,7 +105,7 @@ pub fn sortTable(
     table: *const Table,
 ) !void {
     // for now, we just sort by the first element
-    std.debug.assert(orderby.columns.items.len == 1);
+    // std.debug.assert(orderby.columns.items.len == 1);
     // const col = orderby.columns.items[0];
     // const idx = findIdx(col.id, table.columns) orelse {
     //     panic("orderby col not found: {s} {}\n", .{ col.id, col.order });
@@ -117,19 +125,21 @@ pub fn sortTable(
         fn func(context: @TypeOf(ctx), r1: Row, r2: Row) bool {
             const ids_ctx = context[0];
             for (ids_ctx.items) |col| {
-                if (col[1] == .Asc) {
-                    if (r1.items[col[0]] != r2.items[col[0]]) {
+                if (r1.items[col[0]] != r2.items[col[0]]) {
+                    if (col[1] == .Asc) {
                         return r1.items[col[0]] < r2.items[col[0]];
-                    }
-                } else if (col[1] == .Desc) {
-                    if (r1.items[col[0]] != r2.items[col[0]]) {
-                        return r1.items[col[0]] > r2.items[col[0]];
-                    }
-                } else unreachable;
+                    } else if (col[1] == .Desc) {
+                            return r1.items[col[0]] > r2.items[col[0]];
+                    } else unreachable;
+                }
             }
 
+            return false;
             // default return if all columns are equals
-            return true;
+            // return if (ids_ctx.getLast().@"1" == .Asc) 
+            //     r1.items[ids_ctx.getLast().@"0"] < r2.items[ids_ctx.getLast().@"0"]
+            // else 
+            //     r1.items[ids_ctx.getLast().@"0"] > r2.items[ids_ctx.getLast().@"0"];
         }
     }.func;
 
